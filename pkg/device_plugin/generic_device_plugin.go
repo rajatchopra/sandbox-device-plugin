@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,15 +47,6 @@ import (
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
-const (
-	DeviceNamespace   = "nvidia.com"
-	connectionTimeout = 5 * time.Second
-	vfioDevicePath    = "/dev/vfio"
-	iommuDevicePath   = "/dev/iommu"
-	gpuPrefix         = "PCI_RESOURCE_NVIDIA_COM"
-	vgpuPrefix        = "MDEV_PCI_RESOURCE_NVIDIA_COM"
-)
-
 var returnIommuMap = getIommuMap
 
 // Implements the kubernetes device plugin API
@@ -75,7 +66,7 @@ type GenericDevicePlugin struct {
 // Returns an initialized instance of GenericDevicePlugin
 func NewGenericDevicePlugin(deviceName string, devicePath string, devices []*pluginapi.Device) *GenericDevicePlugin {
 	log.Println("Devicename " + deviceName)
-	serverSock := fmt.Sprintf(pluginapi.DevicePluginPath+"kubevirt-%s.sock", deviceName)
+	serverSock := fmt.Sprintf(pluginapi.DevicePluginPath+"sandbox-%s.sock", deviceName)
 	dpi := &GenericDevicePlugin{
 		devs:       devices,
 		socketPath: serverSock,
@@ -252,7 +243,6 @@ func (dpi *GenericDevicePlugin) ListAndWatch(e *pluginapi.Empty, s pluginapi.Dev
 
 // Performs pre allocation checks and allocates a devices based on the request
 func (dpi *GenericDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
-	log.Println("In allocate")
 	responses := pluginapi.AllocateResponse{}
 	envList := map[string][]string{}
 	iommufdSupported, err := supportsIOMMUFD()
@@ -268,8 +258,8 @@ func (dpi *GenericDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.Al
 			//Retrieve the devices associated with a Iommu group
 			nvDev := returnedMap[iommuId]
 			for _, dev := range nvDev {
-				iommuGroup, err := readLink(basePath, dev.addr, "iommu_group")
-				if err != nil || iommuGroup != iommuId {
+				_, err := readLink(basePath, dev.addr, "iommu_group")
+				if err != nil { // || iommuGroup != iommuId {
 					log.Println("IommuGroup has changed on the system ", dev.addr)
 					return nil, fmt.Errorf("invalid allocation request: unknown device: %s", dev.addr)
 				}
@@ -292,20 +282,21 @@ func (dpi *GenericDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.Al
 					})
 				}
 			}
-			deviceSpecs = append(deviceSpecs, &pluginapi.DeviceSpec{
-				HostPath:      filepath.Join(vfioDevicePath, "vfio"),
-				ContainerPath: filepath.Join(vfioDevicePath, "vfio"),
-				Permissions:   "mrw",
-			})
-			deviceSpecs = append(deviceSpecs, &pluginapi.DeviceSpec{
-				HostPath:      filepath.Join(vfioDevicePath, iommuId),
-				ContainerPath: filepath.Join(vfioDevicePath, iommuId),
-				Permissions:   "mrw",
-			})
 			if iommufdSupported {
 				deviceSpecs = append(deviceSpecs, &pluginapi.DeviceSpec{
 					HostPath:      iommuDevicePath,
 					ContainerPath: iommuDevicePath,
+					Permissions:   "mrw",
+				})
+			} else {
+				deviceSpecs = append(deviceSpecs, &pluginapi.DeviceSpec{
+					HostPath:      filepath.Join(vfioDevicePath, "vfio"),
+					ContainerPath: filepath.Join(vfioDevicePath, "vfio"),
+					Permissions:   "mrw",
+				})
+				deviceSpecs = append(deviceSpecs, &pluginapi.DeviceSpec{
+					HostPath:      filepath.Join(vfioDevicePath, iommuId),
+					ContainerPath: filepath.Join(vfioDevicePath, iommuId),
 					Permissions:   "mrw",
 				})
 			}
@@ -317,11 +308,11 @@ func (dpi *GenericDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.Al
 			envList[key] = append(envList[key], devAddrs...)
 		}
 		envs := buildEnv(envList)
-		log.Printf("Allocated devices %s", envs)
 		response := pluginapi.ContainerAllocateResponse{
 			Envs:    envs,
 			Devices: deviceSpecs,
 		}
+		log.Printf("Allocated devices %s", response)
 
 		responses.ContainerResponses = append(responses.ContainerResponses, &response)
 	}

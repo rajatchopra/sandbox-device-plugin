@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,8 +46,6 @@ var deviceAddress5 = "5"
 var deviceAddress6 = "6"
 var deviceName = "1b80"
 var deviceName1 = "1b81"
-var vgpuDeviceName = "vGPUId"
-var vgpuDeviceName1 = "vGPUId1"
 
 func getFakeLinkDevicePlugin(basePath string, deviceAddress string, link string) (string, error) {
 	if deviceAddress == deviceAddress1 {
@@ -104,27 +102,11 @@ func fakeStartDevicePluginFunc(dp *GenericDevicePlugin) error {
 	return nil
 }
 
-func getFakeVgpuIDFromFile(basePath string, deviceAddress string, property string) (string, error) {
-	if deviceAddress == deviceAddress1 || deviceAddress == deviceAddress2 {
-		return vgpuDeviceName, nil
-	} else if deviceAddress == deviceAddress3 || deviceAddress == deviceAddress4 {
-		return vgpuDeviceName1, nil
-	}
-	return "", errors.New("Incorrect operation")
-}
-
 func getFakeGpuIDforVpu(basePath string, deviceAddress string) (string, error) {
 	if deviceAddress == deviceAddress1 || deviceAddress == deviceAddress2 || deviceAddress == deviceAddress3 {
 		return "GpuId", nil
 	}
 	return "", errors.New("Incorrect operation")
-}
-
-func fakeStartVgpuDevicePluginFunc(dp *GenericVGpuDevicePlugin) error {
-	if dp.deviceName == vgpuDeviceName {
-		return nil
-	}
-	return errors.New("Incorrect operation")
 }
 
 var _ = Describe("Device Plugin", func() {
@@ -186,64 +168,6 @@ var _ = Describe("Device Plugin", func() {
 		})
 	})
 
-	Context("readVgpuIDFromFile() Tests", func() {
-		BeforeEach(func() {
-			readVgpuIDFromFile = readVgpuIDFromFileFunc
-			workDir, err = os.MkdirTemp("", "kubevirt-test")
-			Expect(err).ToNot(HaveOccurred())
-			err = os.Mkdir(workDir+"/1", 0755)
-			Expect(err).ToNot(HaveOccurred())
-			err = os.WriteFile(filepath.Join(workDir, deviceAddress1, "name"), []byte("GRID P100X-1B"), 0644)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		It("Read vgpu id with out error", func() {
-			gpuID, err := readVgpuIDFromFile(workDir, deviceAddress1, "name")
-			Expect(err).To(BeNil())
-			Expect(gpuID).To(Equal("GRID_P100X-1B"))
-		})
-
-		It("Read vgpu id from a missing location to throw error", func() {
-			gpuID, err := readVgpuIDFromFile(workDir, deviceAddress1, "error")
-			Expect(err).ShouldNot(BeNil())
-			Expect(gpuID).To(Equal(""))
-		})
-
-	})
-
-	Context("readGpuIDForVgpu() Tests", func() {
-		BeforeEach(func() {
-			linkDir, err = os.MkdirTemp("", "dp-test")
-			Expect(err).ToNot(HaveOccurred())
-
-			err = os.Mkdir(linkDir+"/vfio-pci", 0755)
-			Expect(err).ToNot(HaveOccurred())
-
-			workDir, err = os.MkdirTemp("", "kubevirt-test")
-			Expect(err).ToNot(HaveOccurred())
-
-			err = os.Mkdir(workDir+"/1", 0755)
-			Expect(err).ToNot(HaveOccurred())
-
-			err = os.Symlink(linkDir+"/vfio-pci", filepath.Join(workDir, deviceAddress1, "driver"))
-			Expect(err).ToNot(HaveOccurred())
-
-		})
-
-		It("Read gpu id corresponding to Vgpu with out error", func() {
-			driverID, err := readGpuIDForVgpu(workDir, "1/driver")
-			Expect(err).To(BeNil())
-			Expect(driverID).To(Equal(filepath.Base(linkDir)))
-		})
-
-		It("Read gpu id from a missing location to throw error", func() {
-			gpuID, err := readGpuIDForVgpu(workDir, "1/error")
-			Expect(err).ShouldNot(BeNil())
-			Expect(gpuID).To(Equal(""))
-		})
-
-	})
-
 	Context("createIommuDeviceMap() Tests", func() {
 
 		BeforeEach(func() {
@@ -279,48 +203,6 @@ var _ = Describe("Device Plugin", func() {
 			Expect(iommuList[0].addr).To(Equal("1"))
 			deviceList := deviceMap["1b80"]
 			Expect(deviceList[0]).To(Equal("io_1"))
-
-			go createDevicePlugins()
-			time.Sleep(3 * time.Second)
-			stop <- struct{}{}
-
-		})
-	})
-
-	Context("createVgpuIDMap() Tests", func() {
-
-		BeforeEach(func() {
-			linkDir, err = os.MkdirTemp("", "dp-test")
-			Expect(err).ToNot(HaveOccurred())
-
-			workDir, err = os.MkdirTemp("", "kubevirt-test")
-			Expect(err).ToNot(HaveOccurred())
-			vGpuBasePath = workDir
-			os.Mkdir(filepath.Join(linkDir, deviceAddress1), 0755)
-			os.Mkdir(filepath.Join(linkDir, deviceAddress2), 0755)
-			os.Mkdir(filepath.Join(linkDir, deviceAddress3), 0755)
-			os.Mkdir(filepath.Join(linkDir, deviceAddress4), 0755)
-			os.Mkdir(filepath.Join(linkDir, deviceAddress5), 0755)
-
-			os.Symlink(filepath.Join(linkDir, deviceAddress1), filepath.Join(workDir, deviceAddress1))
-			os.Symlink(filepath.Join(linkDir, deviceAddress2), filepath.Join(workDir, deviceAddress2))
-			os.Symlink(filepath.Join(linkDir, deviceAddress3), filepath.Join(workDir, deviceAddress3))
-			os.Symlink(filepath.Join(linkDir, deviceAddress4), filepath.Join(workDir, deviceAddress4))
-			os.Symlink(filepath.Join(linkDir, deviceAddress5), filepath.Join(workDir, deviceAddress5))
-
-		})
-
-		It("", func() {
-			readVgpuIDFromFile = getFakeVgpuIDFromFile
-			readGpuIDForVgpu = getFakeGpuIDforVpu
-			startVgpuDevicePlugin = fakeStartVgpuDevicePluginFunc
-
-			createVgpuIDMap()
-
-			gpuList := gpuVgpuMap["GpuId"]
-			Expect(gpuList[0]).To(Equal(deviceAddress1))
-			vGpuList := vGpuMap["vGPUId"]
-			Expect(vGpuList[0].addr).To(Equal(deviceAddress1))
 
 			go createDevicePlugins()
 			time.Sleep(3 * time.Second)

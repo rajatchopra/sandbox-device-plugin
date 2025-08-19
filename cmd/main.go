@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,12 @@
 
 package main
 
-import "kubevirt-gpu-device-plugin/pkg/device_plugin"
+import (
+	"github.com/nvidia/sandbox-device-plugin/pkg/device_plugin"
+	"os"
+)
 
 func main() {
+	device_plugin.PGPUAlias = os.Getenv("P_GPU_ALIAS")
 	device_plugin.InitiateDevicePlugin()
 }
