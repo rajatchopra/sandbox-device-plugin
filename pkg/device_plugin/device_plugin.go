@@ -75,7 +75,7 @@ func createDevicePlugins() {
 	var devs []*pluginapi.Device
 	iommufdSupported, err := supportsIOMMUFD()
 	if err != nil {
-		log.Println("Could not find if IOMMU FD is supported: %v", err)
+		log.Printf("Could not find if IOMMU FD is supported: %v", err)
 		return
 	}
 	log.Printf("Iommu Map %s", iommuMap)
@@ -130,7 +130,7 @@ func startDevicePluginFunc(dp *GenericDevicePlugin) error {
 func createIommuDeviceMap() {
 	iommufdSupported, err := supportsIOMMUFD()
 	if err != nil {
-		log.Println("Could not find if IOMMU FD is supported: %v", err)
+		log.Printf("Could not find if IOMMU FD is supported: %v", err)
 		return
 	}
 	iommuMap = make(map[string][]NvidiaGpuDevice)

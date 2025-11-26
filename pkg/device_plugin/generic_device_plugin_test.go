@@ -176,15 +176,9 @@ var _ = Describe("Generic Device", func() {
 		Expect(responses.GetContainerResponses()[0].Devices[0].HostPath).To(Equal("/dev/vfio/devices/vfio3"))
 		Expect(responses.GetContainerResponses()[0].Devices[0].ContainerPath).To(Equal("/dev/vfio/devices/vfio3"))
 		Expect(responses.GetContainerResponses()[0].Devices[0].Permissions).To(Equal("mrw"))
-		Expect(responses.GetContainerResponses()[0].Devices[1].HostPath).To(Equal("/dev/vfio/vfio"))
-		Expect(responses.GetContainerResponses()[0].Devices[1].ContainerPath).To(Equal("/dev/vfio/vfio"))
+		Expect(responses.GetContainerResponses()[0].Devices[1].HostPath).To(Equal("/dev/iommu"))
+		Expect(responses.GetContainerResponses()[0].Devices[1].ContainerPath).To(Equal("/dev/iommu"))
 		Expect(responses.GetContainerResponses()[0].Devices[1].Permissions).To(Equal("mrw"))
-		Expect(responses.GetContainerResponses()[0].Devices[2].HostPath).To(Equal("/dev/vfio/1"))
-		Expect(responses.GetContainerResponses()[0].Devices[2].ContainerPath).To(Equal("/dev/vfio/1"))
-		Expect(responses.GetContainerResponses()[0].Devices[2].Permissions).To(Equal("mrw"))
-		Expect(responses.GetContainerResponses()[0].Devices[3].HostPath).To(Equal("/dev/iommu"))
-		Expect(responses.GetContainerResponses()[0].Devices[3].ContainerPath).To(Equal("/dev/iommu"))
-		Expect(responses.GetContainerResponses()[0].Devices[3].Permissions).To(Equal("mrw"))
 	})
 
 	It("Should not allocate a device and also throw an error", func() {

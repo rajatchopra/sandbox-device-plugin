@@ -312,7 +312,7 @@ func (dpi *GenericDevicePlugin) Allocate(ctx context.Context, reqs *pluginapi.Al
 			Envs:    envs,
 			Devices: deviceSpecs,
 		}
-		log.Printf("Allocated devices %s", response)
+		log.Printf("Allocated devices %v", response)
 
 		responses.ContainerResponses = append(responses.ContainerResponses, &response)
 	}
